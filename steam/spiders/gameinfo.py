@@ -34,6 +34,7 @@ class GameInfo(CrawlSpider):
             "`metacritic_score` FLOAT DEFAULT NULL,"
             "`user_reviews_count` INT(6) NOT NULL,"
             "`positive_user_reviews_count` INT(6) NOT NULL,"
+            "`positive_percent` FLOAT NOT NULL ,"
             "`negative_user_reviews_count` INT(6) NOT NULL,"
             '`steam_user_reviews_count` INT(6) NOT NULL,'
             '`non_steam_user_reviews_count` INT(6) NOT NULL,'
@@ -84,7 +85,7 @@ class GameInfo(CrawlSpider):
             )
 
     def parse_game(self, response):
-        self.log('parse_game:\n%s' % response.url)
+        self.log('parse_game url:%s' % response.url)
         id = response.meta.get('id')
 
         # file_name = '%s/%s.html' % (self.dir_game, id)
@@ -106,9 +107,6 @@ class GameInfo(CrawlSpider):
                     },
                     callback = self.parse_game
             )
-        elif u'Content in this product may not be appropriate for all ages' in response.body:
-            self.log('need valicate meta:%s' % response.meta)
-            return
 
         soup = BeautifulSoup(response.body, 'lxml')
         sel = Selector(text = response.body)
@@ -125,6 +123,7 @@ class GameInfo(CrawlSpider):
         except:
             price = -1
 
+        # 该游戏在 metacritic 上的评分
         metacritic_score = sel.xpath('//div[@class="score high"]/text()').extract_first()
         try:
             metacritic_score = int(metacritic_score)
@@ -138,6 +137,12 @@ class GameInfo(CrawlSpider):
         # 好评的用户数量
         positive_user_reviews_count = sel.xpath('//label[@for="review_type_positive"]/span/text()').extract_first()
         positive_user_reviews_count = self.count_to_int(positive_user_reviews_count)
+
+        # 好评的百分比
+        if user_reviews_count != -1 and positive_user_reviews_count != -1:
+            positive_percent = positive_user_reviews_count * 1.0 / user_reviews_count * 100
+        else:
+            positive_percent = 0
 
         # 差评的用户数量
         negative_user_reviews_count = sel.xpath('//label[@for="review_type_negative"]/span/text()').extract_first()
@@ -204,28 +209,23 @@ class GameInfo(CrawlSpider):
         save_time = None
 
         msg = (id, name, price, response.url, metacritic_score, user_reviews_count, positive_user_reviews_count,
-               negative_user_reviews_count, steam_user_reviews_count, non_steam_user_reviews_count,
+               positive_percent, negative_user_reviews_count, steam_user_reviews_count, non_steam_user_reviews_count,
                english_user_reviews_count, non_english_user_reviews_count, tag_list, achievements_count, category,
                genre, developer, publisher, release_date, language_number, description, save_time)
 
         command = ("INSERT IGNORE INTO {} "
                    "(id, name, price, url, metacritic_score, user_reviews_count, positive_user_reviews_count, "
-                   "negative_user_reviews_count, steam_user_reviews_count, non_steam_user_reviews_count, "
-                   "english_user_reviews_count, non_english_user_reviews_count, tag_list, achievements_count, "
-                   "category, genre, developer, publisher, release_date, language_number, description, save_time)"
-                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+                   "positive_percent, negative_user_reviews_count, steam_user_reviews_count, "
+                   "non_steam_user_reviews_count, english_user_reviews_count, non_english_user_reviews_count, "
+                   "tag_list, achievements_count, category, genre, developer, publisher, release_date, "
+                   "language_number, description, save_time)"
+                   "VALUES(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
                    "%s)".format(config.steam_game_info_table))
 
         self.sql.insert_data(command, msg)
 
         command = "UPDATE {0} SET is_crawled=\'yes\' WHERE id=\'{1}\'".format(config.steam_game_urls_table, id)
         self.sql.execute(command)
-
-    def validate(self, response):
-        id = self.get_id(response.url)
-
-        file_name = '%s.html' % (id)
-        self.save_page(file_name, response.body)
 
     def error_parse(self, faiture):
         request = faiture.request
@@ -266,28 +266,6 @@ class GameInfo(CrawlSpider):
             return int(ret)
         except:
             return -1
-
-    def parse_steam(self, response):
-        file_name = 'log/steam_urls.txt'
-        url = response.url + '\n'
-        with open(file_name, 'a+') as f:
-            f.write(url)
-            f.close()
-
-    def parse_game_by_number(self, response):
-        self.log('parse_game_by_number:\n%s' % response.url)
-
-    def parse_player(self, response):
-        self.log('parse_player:\n%s' % response.url)
-
-        url = response.url
-        str(url).split('/')
-        names = str(url).split('/')
-        name = names[len(names) - 1]
-
-        with open('players/%s.html' % name, 'w') as f:
-            f.write(response.body)
-            f.close()
 
     def save_page(self, file_name, data):
         with open(file_name, 'w') as f:
