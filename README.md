@@ -20,7 +20,7 @@
 由于不想引入 selenium 库，所以这里采用第二种方式。 	
 
 ### 关于 steam 游戏 id
-steam 的 url 一般为 http://store.steampowered.com/app/620/ 这是 [Protal 2](http://store.steampowered.com/app/620/) 游戏的链接。所以在看是的时候以为每一个游戏都有一个对应的 id。例如 Portal 2  就是 620 。但在实际抓取中总发现，抓取到的 url 数量总是比 24483 少两百多个。经过仔细研究对比终于找到原因。
+steam 的 url 一般为 http://store.steampowered.com/app/620/ 这是 [Portal 2](http://store.steampowered.com/app/620/) 游戏的链接。所以在看是的时候以为每一个游戏都有一个对应的 id。例如 Portal 2  就是 620 。但在实际抓取中总发现，抓取到的 url 数量总是比 24483 少两百多个。经过仔细研究对比终于找到原因。
 
 有一些游戏在初期会发布免费的 demo 试玩版，收集用户数据，然后对游戏进行更改。游戏正式上线后，之前的 demo 版就可能失效了，或者直接跳转到正式版的链接。这就变成了一个游戏，只存在了同一个 id。但是在所有游戏排行中，却显示为两个游戏。所以会出现抓取到的数量会比实际显示数量少两百多的情况。折腾了许久，以此记录。
 
